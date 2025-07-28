@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>交互式北京旅行攻略</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Warm Neutrals -->
+    <!-- Application Structure Plan: A tab-based single-page application. The main categories (Must-Go Attractions, Optional Attractions, Food, Tips) are organized into tabs for quick navigation. This structure prevents overwhelming the user with a long scroll and allows direct access to needed information. Content within each tab is rendered as a grid of cards, which is responsive and visually appealing. A summary dashboard with a Chart.js chart is included at the top to provide a quick analytical overview of the trip's planning requirements. This design choice prioritizes usability and modern aesthetics over a literal representation of the source tables. -->
+    <!-- Visualization & Content Choices: Report Info: Attraction booking requirements. -> Goal: Quickly understand planning complexity. -> Viz/Presentation Method: Doughnut Chart (Chart.js/Canvas). -> Interaction: None needed, it's for display. -> Justification: A doughnut chart is an excellent way to show proportions of a whole, clearly illustrating the breakdown of attractions by booking type (must-book, recommended, no-book). All other tabular data is presented in a card-based layout using HTML/CSS for better readability and responsiveness on mobile devices, which is more user-friendly than a traditional table. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Inter', 'Noto Sans SC', sans-serif;
+            background-color: #FDFBF7;
+            color: #383838;
+        }
+        .tab-active {
+            border-color: #D97706;
+            color: #D97706;
+            font-weight: 600;
+        }
+        .content-panel {
+            display: none;
+        }
+        .content-panel-active {
+            display: block;
+        }
+        .card {
+            background-color: #FFFFFF;
+            border: 1px solid #F3EAD9;
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+        }
+        .card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.07), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        .chart-container {
+            position: relative;
+            height: 200px;
+            width: 200px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container mx-auto p-4 sm:p-6 lg:p-8 max-w-7xl">
+
+        <header class="text-center mb-8">
+            <h1 class="text-4xl font-bold text-amber-800">北京旅行攻略</h1>
+            <p class="text-lg text-gray-600 mt-2">一份为您精心打造的交互式旅行计划</p>
+        </header>
+
+        <section id="dashboard" class="mb-8 p-6 card">
+            <h2 class="text-2xl font-bold text-center mb-4 text-amber-700">行程概览</h2>
+            <div class="flex flex-col md:flex-row items-center justify-around gap-8">
+                <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-2 lg:grid-cols-4 gap-4 text-center order-2 md:order-1">
+                    <div class="bg-amber-50 p-4 rounded-lg">
+                        <p class="text-3xl font-bold text-amber-600" id="must-go-count">0</p>
+                        <p class="text-sm text-gray-600">必去景点</p>
+                    </div>
+                    <div class="bg-green-50 p-4 rounded-lg">
+                        <p class="text-3xl font-bold text-green-600" id="optional-count">0</p>
+                        <p class="text-sm text-gray-600">可选景点</p>
+                    </div>
+                    <div class="bg-rose-50 p-4 rounded-lg">
+                        <p class="text-3xl font-bold text-rose-600" id="food-count">0</p>
+                        <p class="text-sm text-gray-600">美食推荐</p>
+                    </div>
+                     <div class="bg-sky-50 p-4 rounded-lg">
+                        <p class="text-3xl font-bold text-sky-600" id="tips-count">0</p>
+                        <p class="text-sm text-gray-600">旅行贴士</p>
+                    </div>
+                </div>
+                <div class="chart-container order-1 md:order-2">
+                    <canvas id="bookingChart"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <div class="sticky top-0 z-10 bg-white/80 backdrop-blur-sm mb-8">
+            <nav id="tabs" class="flex justify-center border-b border-gray-200">
+                <button data-target="panel-must-go" class="tab tab-active py-4 px-6 block hover:text-amber-600 focus:outline-none border-b-2 font-medium">必去景点</button>
+                <button data-target="panel-optional" class="tab py-4 px-6 block hover:text-amber-600 focus:outline-none border-b-2 font-medium">可选景点</button>
+                <button data-target="panel-food" class="tab py-4 px-6 block hover:text-amber-600 focus:outline-none border-b-2 font-medium">美食推荐</button>
+                <button data-target="panel-info" class="tab py-4 px-6 block hover:text-amber-600 focus:outline-none border-b-2 font-medium">住宿 & 贴士</button>
+            </nav>
+        </div>
+
+        <div id="panels">
+            <div id="panel-must-go" class="content-panel content-panel-active">
+                 <p class="text-center text-gray-600 mb-6">这些是需要您重点规划、提前预约的热门景点。</p>
+                <div id="must-go-attractions-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+            </div>
+
+            <div id="panel-optional" class="content-panel">
+                <p class="text-center text-gray-600 mb-6">这些景点无需预约，可以根据您的时间和兴趣灵活安排。</p>
+                <div id="optional-attractions-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+            </div>
+
+            <div id="panel-food" class="content-panel">
+                 <p class="text-center text-gray-600 mb-6">品味地道京味儿，这些美食不容错过。</p>
+                <div id="food-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+            </div>
+
+            <div id="panel-info" class="content-panel space-y-8">
+                <div id="accommodation-info" class="card p-6"></div>
+                <div id="tips-info" class="card p-6"></div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const data = {
+            mustGoAttractions: [
+                { name: '故宫博物院', emoji: '🏛️', booking: '✅ 必须预约', time: '提前7天', method: '故宫官网/微信小程序', realName: '🆔 是', remark: '每日20:00放票，旺季秒光，需身份证。', opinion: '' },
+                { name: '国家博物馆', emoji: '🏛️', booking: '✅ 必须预约', time: '提前7天', method: '官网/微信“国家博物馆”小程序', realName: '🆔 是', remark: '免费但抢票，每日17:00放票。', opinion: '' },
+                { name: '天坛公园', emoji: '🏛️', booking: '😊 建议预约', time: '提前3天', method: '微信“畅游公园”小程序', realName: '🆔 是', remark: '线上购票可避开排队，提升入园效率。北京的标志性建筑之一，祈年殿非常壮观。公园很大，可以逛很久。', opinion: '' },
+                { name: '颐和园', emoji: '🏛️', booking: '😊 建议预约', time: '提前3-7天', method: '微信“畅游公园”小程序', realName: '🆔 是', remark: '暑期等旺季人流大，提前预约更省时，建议避开高峰时段。皇家园林的典范，风景如画，昆明湖和万寿山是亮点。', opinion: '' },
+                { name: '圆明园遗址公园', emoji: '🏛️', booking: '😊 建议预约', time: '提前3天', method: '微信“畅游公园”小程序/携程等', realName: '🆔 是', remark: '大门票免费，内部小景点如西洋楼遗址区需购票，建议提前了解各区域收费情况。', opinion: '' },
+                { name: '恭王府', emoji: '🏛️', booking: '✅ 必须预约', time: '提前7-10天', method: '微信“恭王府”小程序/官网', realName: '🆔 是', remark: '每日限流24,000人，建议尽早预约以免影响行程。清代规模最大的王府，感受王府文化和园林艺术。', opinion: '小圆子，门票 40，很一般' },
+                { name: '北京工艺美术馆/非遗馆', emoji: '🏛️', booking: '✅ 必须预约', time: '提前1-7天', method: '官方公众号或官网“我要观展”入口', realName: '🆔 是', remark: '免费参观，周末及节假日通常需在线预约，建议提前关注开放时间和预约通道。', opinion: '' },
+                { name: '中国考古博物馆', emoji: '🏛️', booking: '✅ 必须预约', time: '提前3天', method: '中国考古博物馆公众号或官网预约', realName: '🆔 是', remark: '每日限额约500人，上午9点放号，票源紧张，请务必提前抢票。', opinion: '' },
+                { name: '八达岭长城', emoji: '🏛️', booking: '✅ 必须预约', time: '提前7天', method: '“长城内外”公众号/官网', realName: '🆔 是', remark: '建议提前预约，可选择索道或缆车上下，节省体力。旺季人多，注意防晒和保暖。', opinion: '' },
+                { name: '慕田峪长城', emoji: '🏛️', booking: '✅ 必须预约', time: '提前7天', method: '“慕田峪长城”公众号/官网', realName: '� 是', remark: '风景优美，有缆车和滑道，体验感好。人相对少一些，更适合休闲游。', opinion: '' },
+                { name: '天安门', emoji: '🏛️', booking: '✅ 必须预约', time: '提前1-3天', method: '微信公众号“天安门地区管理委员会”或相关官方渠道', realName: '🆔 是', remark: '参观天安门广场本身无需预约，但进入城楼、观看升旗仪式、参观毛主席纪念堂等需预约或排队。安检严格。', opinion: '' },
+                { name: '清华大学', emoji: '🏛️', booking: '✅ 必须预约', time: '提前1-3天', method: '“参观清华”微信小程序（通常寒暑假开放）', realName: '🆔 是', remark: '校园参观需预约，且通常仅在特定节假日或寒暑假开放。具体开放时间和预约方式请关注官方通知。', opinion: '' },
+                { name: '北京大学', emoji: '🏛️', booking: '✅ 必须预约', time: '提前1-3天', method: '“参观北大”微信小程序（通常寒暑假开放）', realName: '🆔 是', remark: '校园参观需预约，且通常仅在特定节假日或寒暑假开放。具体开放时间和预约方式请关注官方通知。', opinion: '' }
+            ],
+            optionalAttractions: [
+                { name: '南锣鼓巷', emoji: '🚶‍♀️', remark: '历史悠久的胡同，两旁有许多特色小店、餐馆和酒吧，体验老北京胡同风情。建议避开节假日高峰期。', opinion: '虽然商业化气息较浓，人流多，消费略高，但景色和胡同韵味尚可。' },
+                { name: '三里屯太古里', emoji: '🚶‍♀️', remark: '时尚潮流地标，汇集了众多国际品牌、设计师店铺、餐厅和酒吧，适合购物、餐饮和夜生活。', opinion: '时尚潮流地标，我还没去过。' },
+                { name: '什刹海', emoji: '🚶‍♀️', remark: '包含前海、后海和西海，风景优美，可以划船、骑行，周边有酒吧街和胡同，感受老北京的悠闲生活。', opinion: '周边商业化趋势明显，景色尚可，但游客多，消费需谨慎，不建议随意购物。' },
+                { name: '烟袋斜街', emoji: '🚶‍♀️', remark: '紧邻什刹海，是北京最老的斜街之一，有许多特色小店、茶馆和酒吧，充满老北京韵味。', opinion: '感觉比较一般，可能期待值不要太高。' },
+                { name: '王府井大街', emoji: '🚶‍♀️', remark: '著名的商业街，有百货大楼、小吃街、步行街等，适合购物和品尝小吃。', opinion: '就是一条步行街，购物为主，特色可能不如想象中突出。' },
+                { name: '前门大街', emoji: '🚶‍♀️', remark: '历史文化商业街，保留了老北京的建筑风格，有许多老字号店铺和特色小吃。', opinion: '人很多，离天安门广场很近，主要是小吃街，适合品尝特色小吃。' },
+                { name: '合生汇', emoji: '🚶‍♀️', remark: '位于宝丽家附近，一个大型综合购物中心。', opinion: '超级大商场，非常大。' },
+                { name: '奥林匹克森林公园 (奥森)', emoji: '🚶‍♀️', remark: '北京市最大的城市公园，分为南园和北园，有湖泊、湿地、跑步道等。', opinion: '推荐夜景，晚上可以去散步溜达。' }
+            ],
+            food: [
+                { name: '紫光园烤鸭', emoji: '😋', location: '紫光园各分店', remark: '性价比高，家常风味，除了烤鸭还有很多清真菜品。', opinion: '好吃，必吃' },
+                { name: '牛街小吃', emoji: '😋', location: '牛街地区（如洪记小吃店、聚宝源清真超市等）', remark: '北京回民特色小吃聚集地，有各种糕点、熟食、面点等，如牛羊肉包子、糖耳朵、面茶等。', opinion: '逛逛' },
+                { name: '炙子烤肉', emoji: '😋', location: '烤肉刘、鸦儿李记', remark: '老北京特色烤肉，用炭火炙烤牛羊肉，香气扑鼻，自己动手烤制乐趣多。', opinion: '好吃' },
+                { name: '涮羊肉', emoji: '😋', location: '鸦儿李记、马辈儿涮肉、聚宝源（牛街总店最有名）', remark: '老北京清真铜锅涮肉，肉质新鲜，麻酱小料地道。聚宝源是牛街排队王，除了涮肉还有很多熟食糕点，麻酱烧饼也是必点。', opinion: '好吃，必吃' },
+                { name: '紫光园小吃', emoji: '😋', location: '紫光园各分店', remark: '除了烤鸭和炒菜，紫光园也有很多清真小吃和糕点，如豌豆黄、驴打滚等。', opinion: '' },
+                { name: '护国寺小吃', emoji: '😋', location: '护国寺小吃店（多家分店）', remark: '老北京小吃集合地，品种丰富，豆汁、焦圈、面茶、杂碎汤等一应俱全。', opinion: '' },
+                { name: '豆汁儿', emoji: '😋', location: '护国寺小吃、老磁器口豆汁店等', remark: '北京特色早餐，味道独特，通常搭配焦圈、咸菜食用。', opinion: '必须尝尝' },
+                { name: '麻酱烧饼', emoji: '😋', location: '护国寺小吃、街边小吃店、清真小吃店', remark: '外酥里软，层次分明，麻酱香味浓郁，可以夹肉或单独食用。', opinion: '' }
+            ],
+            accommodation: {
+                title: '北京住宿建议 🛌',
+                content: `
+                    <p class="font-semibold text-lg mb-2">📍 推荐区域：鸟巢附近（五公里内都不错）</p>
+                    <ul class="list-disc list-inside space-y-2 text-gray-700">
+                        <li><span class="font-semibold">环境：</span>周边环境相对较新，绿化好，安静宜人。</li>
+                        <li><span class="font-semibold">餐饮：</span>附近餐饮选择丰富，从快餐到特色餐厅应有尽有。</li>
+                        <li><span class="font-semibold">价格：</span>酒店价格通常适中，性价比高。</li>
+                        <li><span class="font-semibold">选择建议：</span>
+                            <ul class="list-disc list-inside ml-6 mt-1">
+                                <li><span class="font-semibold">连锁酒店：</span>优先考虑知名连锁酒店，服务和卫生更有保障。</li>
+                                <li><span class="font-semibold">房间选择：</span>预订时请务必注意房间是否有窗户，以确保住宿体验。</li>
+                            </ul>
+                        </li>
+                    </ul>
+                `
+            },
+            tips: [
+                { type: '身份证件', detail: '<strong>必备！</strong> 参观所有需预约景点（如故宫、国博、长城、大学等）及入住酒店均需本人有效身份证件。请务必随身携带。' },
+                { type: '学生证/老年证/残疾证', detail: '如果您符合条件，携带相关证件可享受景点门票优惠。部分景点可能需要提前线上核验或现场验证。' },
+                { type: '交通卡/乘车码', detail: '支付宝或者微信开通手机乘车码（如北京公交、亿通行），方便乘坐地铁和公交。优先推荐地铁。' },
+                { type: '打车', detail: '推荐使用“滴滴出行”等打车软件。打车时请注意选择合适的价位，平台可能会默认勾选高价位选项，请核对后再确认。' },
+                { type: '地图导航', detail: '推荐使用<a href="https://map.baidu.com/" target="_blank" class="text-blue-600 hover:underline">百度地图</a>或<a href="https://www.amap.com/" target="_blank" class="text-blue-600 hover:underline">高德地图</a>进行导航，它们在北京的实时路况和公共交通信息都比较准确。三公里走路或者骑车原则。北京打车很慢。' },
+                { type: '美团', detail: '推荐使用“美团”App，可用于购买景点门票、查找美食餐厅、团购优惠等，非常实用。部分预约不到的景点，美团上可能有套票等等，有时可以挽救一下。' }
+            ]
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const tabs = document.querySelectorAll('.tab');
+            const panels = document.querySelectorAll('.content-panel');
+
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    tabs.forEach(item => item.classList.remove('tab-active'));
+                    panels.forEach(panel => panel.classList.remove('content-panel-active'));
+
+                    tab.classList.add('tab-active');
+                    const targetPanel = document.getElementById(tab.dataset.target);
+                    targetPanel.classList.add('content-panel-active');
+                });
+            });
+
+            function renderMustGoAttractions() {
+                const container = document.getElementById('must-go-attractions-container');
+                container.innerHTML = data.mustGoAttractions.map(item => `
+                    <div class="card p-4 flex flex-col">
+                        <h3 class="text-xl font-bold mb-2">${item.emoji} ${item.name}</h3>
+                        <div class="text-sm space-y-1 text-gray-600 flex-grow">
+                            <p><span class="font-semibold">${item.booking}</span></p>
+                            <p><strong>推荐时间:</strong> ${item.time}</p>
+                            <p><strong>预约方式:</strong> ${item.method}</p>
+                            <p><strong>实名制:</strong> ${item.realName}</p>
+                            <p><strong>备注:</strong> ${item.remark}</p>
+                        </div>
+                        ${item.opinion ? `<div class="mt-3 pt-3 border-t border-amber-100 text-amber-800"><p><strong>在我看来～</strong> ${item.opinion}</p></div>` : ''}
+                    </div>
+                `).join('');
+            }
+
+            function renderOptionalAttractions() {
+                const container = document.getElementById('optional-attractions-container');
+                container.innerHTML = data.optionalAttractions.map(item => `
+                    <div class="card p-4 flex flex-col">
+                        <h3 class="text-xl font-bold mb-2">${item.emoji} ${item.name}</h3>
+                        <div class="text-sm text-gray-600 flex-grow">
+                            <p><strong>备注:</strong> ${item.remark}</p>
+                        </div>
+                        ${item.opinion ? `<div class="mt-3 pt-3 border-t border-green-100 text-green-800"><p><strong>在我看来～</strong> ${item.opinion}</p></div>` : ''}
+                    </div>
+                `).join('');
+            }
+            
+            function renderFood() {
+                const container = document.getElementById('food-container');
+                container.innerHTML = data.food.map(item => `
+                    <div class="card p-4 flex flex-col">
+                        <h3 class="text-xl font-bold mb-2">${item.emoji} ${item.name}</h3>
+                        <div class="text-sm space-y-1 text-gray-600 flex-grow">
+                            <p><strong>推荐地点:</strong> ${item.location}</p>
+                            <p><strong>备注:</strong> ${item.remark}</p>
+                        </div>
+                        ${item.opinion ? `<div class="mt-3 pt-3 border-t border-rose-100 text-rose-800"><p><strong>在我看来～</strong> ${item.opinion}</p></div>` : ''}
+                    </div>
+                `).join('');
+            }
+
+            function renderInfo() {
+                const accommodationContainer = document.getElementById('accommodation-info');
+                accommodationContainer.innerHTML = `
+                    <h3 class="text-2xl font-bold mb-4 text-amber-700">${data.accommodation.title}</h3>
+                    ${data.accommodation.content}
+                `;
+
+                const tipsContainer = document.getElementById('tips-info');
+                tipsContainer.innerHTML = `
+                    <h3 class="text-2xl font-bold mb-4 text-amber-700">北京旅行注意事项 ⚠️</h3>
+                    <ul class="space-y-3">
+                        ${data.tips.map(tip => `
+                            <li class="text-gray-700">
+                                <strong class="text-gray-800">${tip.type}:</strong> ${tip.detail}
+                            </li>
+                        `).join('')}
+                    </ul>
+                `;
+            }
+            
+            function renderDashboard() {
+                document.getElementById('must-go-count').textContent = data.mustGoAttractions.length;
+                document.getElementById('optional-count').textContent = data.optionalAttractions.length;
+                document.getElementById('food-count').textContent = data.food.length;
+                document.getElementById('tips-count').textContent = data.tips.length;
+
+                const mustBookCount = data.mustGoAttractions.filter(item => item.booking.includes('必须')).length;
+                const recommendBookCount = data.mustGoAttractions.filter(item => item.booking.includes('建议')).length;
+                const noBookCount = data.optionalAttractions.length;
+
+                const ctx = document.getElementById('bookingChart').getContext('2d');
+                new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['必须预约', '建议预约', '无需预约'],
+                        datasets: [{
+                            label: '景点预约类型分布',
+                            data: [mustBookCount, recommendBookCount, noBookCount],
+                            backgroundColor: [
+                                'rgba(239, 68, 68, 0.8)',
+                                'rgba(245, 158, 11, 0.8)',
+                                'rgba(16, 185, 129, 0.8)'
+                            ],
+                            borderColor: [
+                                'rgba(239, 68, 68, 1)',
+                                'rgba(245, 158, 11, 1)',
+                                'rgba(16, 185, 129, 1)'
+                            ],
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: {
+                                    font: {
+                                        family: "'Inter', 'Noto Sans SC', sans-serif"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            renderMustGoAttractions();
+            renderOptionalAttractions();
+            renderFood();
+            renderInfo();
+            renderDashboard();
+        });
+    </script>
+</body>
+</html>
