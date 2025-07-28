@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,28 +9,44 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap"
+        rel="stylesheet">
     <!-- Chosen Palette: Warm Neutrals -->
     <!-- Application Structure Plan: A tab-based single-page application. The main categories (Must-Go Attractions, Optional Attractions, Food, Tips) are organized into tabs for quick navigation. This structure prevents overwhelming the user with a long scroll and allows direct access to needed information. Content within each tab is rendered as a grid of cards, which is responsive and visually appealing. A summary dashboard with a Chart.js chart is included at the top to provide a quick analytical overview of the trip's planning requirements. This design choice prioritizes usability and modern aesthetics over a literal representation of the source tables. -->
     <!-- Visualization & Content Choices: Report Info: Attraction booking requirements. -> Goal: Quickly understand planning complexity. -> Viz/Presentation Method: Doughnut Chart (Chart.js/Canvas). -> Interaction: None needed, it's for display. -> Justification: A doughnut chart is an excellent way to show proportions of a whole, clearly illustrating the breakdown of attractions by booking type (must-book, recommended, no-book). All other tabular data is presented in a card-based layout using HTML/CSS for better readability and responsiveness on mobile devices, which is more user-friendly than a traditional table. -->
     <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <script>
+        var _hmt = _hmt || [];
+        (function () {
+            var hm = document.createElement("script");
+            hm.src = "https://hm.baidu.com/hm.js?b9d7173a8985a1b14ab2b2613b28f704";
+            var s = document.getElementsByTagName("script")[0];
+            s.parentNode.insertBefore(hm, s);
+        })();
+    </script>
+
     <style>
         body {
             font-family: 'Inter', 'Noto Sans SC', sans-serif;
             background-color: #FDFBF7;
             color: #383838;
         }
+
         .tab-active {
             border-color: #D97706;
             color: #D97706;
             font-weight: 600;
         }
+
         .content-panel {
             display: none;
         }
+
         .content-panel-active {
             display: block;
         }
+
         .card {
             background-color: #FFFFFF;
             border: 1px solid #F3EAD9;
@@ -37,10 +54,12 @@
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
             transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
         }
+
         .card:hover {
             transform: translateY(-4px);
             box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.07), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
         }
+
         .chart-container {
             position: relative;
             height: 200px;
@@ -48,6 +67,7 @@
         }
     </style>
 </head>
+
 <body>
 
     <div class="container mx-auto p-4 sm:p-6 lg:p-8 max-w-7xl">
@@ -60,7 +80,8 @@
         <section id="dashboard" class="mb-8 p-6 card">
             <h2 class="text-2xl font-bold text-center mb-4 text-amber-700">行程概览</h2>
             <div class="flex flex-col md:flex-row items-center justify-around gap-8">
-                <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-2 lg:grid-cols-4 gap-4 text-center order-2 md:order-1">
+                <div
+                    class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-2 lg:grid-cols-4 gap-4 text-center order-2 md:order-1">
                     <div class="bg-amber-50 p-4 rounded-lg">
                         <p class="text-3xl font-bold text-amber-600" id="must-go-count">0</p>
                         <p class="text-sm text-gray-600">必去景点</p>
@@ -73,7 +94,7 @@
                         <p class="text-3xl font-bold text-rose-600" id="food-count">0</p>
                         <p class="text-sm text-gray-600">美食推荐</p>
                     </div>
-                     <div class="bg-sky-50 p-4 rounded-lg">
+                    <div class="bg-sky-50 p-4 rounded-lg">
                         <p class="text-3xl font-bold text-sky-600" id="tips-count">0</p>
                         <p class="text-sm text-gray-600">旅行贴士</p>
                     </div>
@@ -86,26 +107,33 @@
 
         <div class="sticky top-0 z-10 bg-white/80 backdrop-blur-sm mb-8">
             <nav id="tabs" class="flex justify-center border-b border-gray-200">
-                <button data-target="panel-must-go" class="tab tab-active py-4 px-6 block hover:text-amber-600 focus:outline-none border-b-2 font-medium">必去景点</button>
-                <button data-target="panel-optional" class="tab py-4 px-6 block hover:text-amber-600 focus:outline-none border-b-2 font-medium">可选景点</button>
-                <button data-target="panel-food" class="tab py-4 px-6 block hover:text-amber-600 focus:outline-none border-b-2 font-medium">美食推荐</button>
-                <button data-target="panel-info" class="tab py-4 px-6 block hover:text-amber-600 focus:outline-none border-b-2 font-medium">住宿 & 贴士</button>
+                <button data-target="panel-must-go"
+                    class="tab tab-active py-4 px-6 block hover:text-amber-600 focus:outline-none border-b-2 font-medium">必去景点</button>
+                <button data-target="panel-optional"
+                    class="tab py-4 px-6 block hover:text-amber-600 focus:outline-none border-b-2 font-medium">可选景点</button>
+                <button data-target="panel-food"
+                    class="tab py-4 px-6 block hover:text-amber-600 focus:outline-none border-b-2 font-medium">美食推荐</button>
+                <button data-target="panel-info"
+                    class="tab py-4 px-6 block hover:text-amber-600 focus:outline-none border-b-2 font-medium">住宿 &
+                    贴士</button>
             </nav>
         </div>
 
         <div id="panels">
             <div id="panel-must-go" class="content-panel content-panel-active">
-                 <p class="text-center text-gray-600 mb-6">这些是需要您重点规划、提前预约的热门景点。</p>
-                <div id="must-go-attractions-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+                <p class="text-center text-gray-600 mb-6">这些是需要您重点规划、提前预约的热门景点。</p>
+                <div id="must-go-attractions-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                </div>
             </div>
 
             <div id="panel-optional" class="content-panel">
                 <p class="text-center text-gray-600 mb-6">这些景点无需预约，可以根据您的时间和兴趣灵活安排。</p>
-                <div id="optional-attractions-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+                <div id="optional-attractions-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                </div>
             </div>
 
             <div id="panel-food" class="content-panel">
-                 <p class="text-center text-gray-600 mb-6">品味地道京味儿，这些美食不容错过。</p>
+                <p class="text-center text-gray-600 mb-6">品味地道京味儿，这些美食不容错过。</p>
                 <div id="food-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
             </div>
 
@@ -225,7 +253,7 @@
                     </div>
                 `).join('');
             }
-            
+
             function renderFood() {
                 const container = document.getElementById('food-container');
                 container.innerHTML = data.food.map(item => `
@@ -259,7 +287,7 @@
                     </ul>
                 `;
             }
-            
+
             function renderDashboard() {
                 document.getElementById('must-go-count').textContent = data.mustGoAttractions.length;
                 document.getElementById('optional-count').textContent = data.optionalAttractions.length;
@@ -315,5 +343,7 @@
             renderDashboard();
         });
     </script>
+
 </body>
+
 </html>
